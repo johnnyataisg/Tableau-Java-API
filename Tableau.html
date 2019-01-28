@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="css/bootstrap.css">
+        <link rel="stylesheet" type="text/css" href="css/style.css">
+        <script type="text/javascript" src="https://public.tableau.com/javascripts/api/tableau-2.0.0.min.js"></script>
+        <script>
+            var containerDiv;
+            var url;
+            var workbook;
+            var activeSheet;
+
+            function initViz() {
+                containerDiv = document.getElementById("vizContainer");
+                url = "https://public.tableau.com/views/YouTubeDemo_5/SalesbySub-Category?:embed=y&:display_count=yes&publish=yes";
+                var options = {
+                    width: 800,
+                    height: 500,
+                    hideTabs: true,
+                    hideToolbar: true,
+                    onFirstInteractive: function () {
+                    workbook = viz.getWorkbook();
+                    activeSheet = workbook.getActiveSheet();
+                    }
+                };
+                var viz = new tableau.Viz(containerDiv, url, options);
+            }
+
+            function filterCategory(category) {
+                workbook.getActiveSheet().applyFilterAsync(
+                    "Category",
+                    category,
+                    tableau.FilterUpdateType.REPLACE);
+            } 
+
+            function addCategory(category) {
+                workbook.getActiveSheet().applyFilterAsync(
+                    "Category",
+                    category,
+                    tableau.FilterUpdateType.ADD);
+            }  
+
+            function removeCategory(category) {
+                workbook.getActiveSheet().applyFilterAsync(
+                    "Category",
+                    category,
+                    tableau.FilterUpdateType.REMOVE);
+            }
+
+            function filterSales() {
+                workbook.getActiveSheet().applyRangeFilterAsync(
+                    "Sales",
+                    {
+                    min: 500,
+                    max: 1000000
+                    },
+                    tableau.FilterUpdateType.REPLACE);
+            }      
+
+            function removeFilters() {
+                workbook.getActiveSheet().clearFilterAsync("Category");
+                workbook.getActiveSheet().clearFilterAsync("Sales");
+            }
+
+            function switchToMapTab(sheetname) {
+                workbook.activateSheetAsync(sheetname);
+            }
+
+            function selectSingleValue(country) {
+                workbook.getActiveSheet().selectMarksAsync(
+                    "Country",
+                    country,
+                    tableau.SelectionUpdateType.REPLACE);
+            }   
+
+            function addSelect(country) {
+                workbook.getActiveSheet().selectMarksAsync(
+                    "Country",
+                    country,
+                    tableau.FilterUpdateType.ADD);
+            }         
+
+            function removeFromSelection(value) {
+                workbook.getActiveSheet().selectMarksAsync(
+                    "SUM(Profit)",
+                    {
+                    max: value
+                    },
+                    tableau.FilterUpdateType.REMOVE);
+            }     
+
+            function clearSelection() {
+                workbook.getActiveSheet().clearSelectedMarksAsync();
+            }    
+        </script>
+    </head>
+    <body onload="initViz();">
+        <form >
+            <div id="vizContainer"></div>
+            <div class="container" style="margin-left: 10px;">
+                <h3 class="header">Filters</h3>
+                <div class="row button-container">
+                    <input type="button" value="Show Furniture Only" onclick="filterCategory('Furniture');" class="col-sm btn btn-info btn-sm">
+                    <input type="button" value="Show Office-supplies Only" onclick="filterCategory('Office Supplies');" class="col-sm btn btn-info btn-sm">
+                    <input type="button" value="Show Technology Only" onclick="filterCategory('Technology');" class="col-sm btn btn-info btn-sm">
+                </div>
+                <div class="row button-container">
+                    <input type="button" value="Add Furniture Filter" onclick="addCategory('Furniture');" class="col-sm btn btn-dark btn-sm">
+                    <input type="button" value="Add Office Filter" onclick="addCategory('Office Supplies');" class="col-sm btn btn-dark btn-sm">
+                    <input type="button" value="Add Technology Filter" onclick="addCategory('Technology');" class="col-sm btn btn-dark btn-sm">
+                </div>
+                <div class="row button-container">
+                    <input type="button" value="Remove Furniture Filter" onclick="removeCategory('Furniture');" class="col-sm btn btn-warning btn-sm">
+                    <input type="button" value="Remove Office Filter" onclick="removeCategory('Office Supplies');" class="col-sm btn btn-warning btn-sm">
+                    <input type="button" value="Remove Technology Filter" onclick="removeCategory('Technology');" class="col-sm btn btn-warning btn-sm">
+                </div>
+                <div class="row button-container">
+                    <input type="button" value="Filter Sales" onclick="filterSales();" class="col-sm btn btn-default btn-sm">
+                </div>
+                <div class="row button-container">
+                    <input type="button" value="Remove all filters" onclick="removeFilters();" class="col-sm btn btn-danger btn-sm">
+                </div>
+            </div>
+            <hr>
+            <div class="container" style="margin-left: 10px;">
+                <h3 class="header">Tabs</h3>
+                <div class="row button-container">
+                    <input type="button" value="See Global Sales and Profits" onclick="switchToMapTab('Global Sales and Profits');" class="col-sm btn btn-primary btn-sm">
+                    <input type="button" value="See Sales by Sub-category" onclick="switchToMapTab('Sales by Sub-Category');" class="col-sm btn btn-primary btn-sm">
+                </div>
+            </div>
+            <div class="container" style="margin-left: 10px;">
+                <h3 class="header">Select</h3>
+                <div class="row button-container">
+                    <input type="button" value="Select US & Mexico" onclick="selectSingleValue(['United States', 'Mexico']);" class="col-sm btn btn-primary btn-sm">
+                    <input type="button" value="Select Brazil & Ireland" onclick="selectSingleValue(['Brazil', 'Ireland']);" class="col-sm btn btn-primary btn-sm">
+                </div>
+                <div class="row button-container">
+                    <input type="button" value="Add China" onclick="addSelect('China');" class="col-sm btn btn-dark btn-sm">
+                    <input type="button" value="Add Taiwan" onclick="addSelect('Taiwan');" class="col-sm btn btn-dark btn-sm">
+                </div>
+                <div class="row button-container">
+                    <input type="button" value="Profit Above 10000" onclick="removeFromSelection(10000);" class="col-sm btn btn-warning btn-sm">
+                    <input type="button" value="Profit Above 20000" onclick="removeFromSelection(20000);" class="col-sm btn btn-warning btn-sm">
+                    <input type="button" value="Profit Above 50000" onclick="removeFromSelection(50000);" class="col-sm btn btn-warning btn-sm">
+                </div>
+                <div class="row button-container">
+                    <input type="button" value="Clear Selections" onclick="clearSelection();" class="col-sm btn btn-danger btn-sm">
+                </div>
+            </div>
+        </form>
+    </body>
+</html>
