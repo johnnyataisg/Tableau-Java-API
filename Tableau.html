@@ -10,6 +10,7 @@
             var url;
             var workbook;
             var activeSheet;
+			var viz;
 
             function initViz() {
                 containerDiv = document.getElementById("vizContainer");
@@ -20,11 +21,12 @@
                     hideTabs: true,
                     hideToolbar: true,
                     onFirstInteractive: function () {
+					listenToMarksSelection();
                     workbook = viz.getWorkbook();
                     activeSheet = workbook.getActiveSheet();
                     }
                 };
-                var viz = new tableau.Viz(containerDiv, url, options);
+                viz = new tableau.Viz(containerDiv, url, options);
             }
 
             function filterCategory(category) {
@@ -93,6 +95,117 @@
             function clearSelection() {
                 workbook.getActiveSheet().clearSelectedMarksAsync();
             }    
+			
+			function chainCalls() {
+				workbook.activateSheetAsync("Global Sales and Profits")
+				.then(function (newSheet) {
+					activeSheet = newSheet;
+					return activeSheet.selectMarksAsync(
+					"Country",
+					"India",
+					tableau.SelectionUpdateType.REPLACE);
+				})
+				.otherwise(function (err) {
+					alert("There is an error");
+				});
+			}    
+
+			function querySheets() {
+				var sheets = workbook.getPublishedSheetsInfo();
+				var text = getSheetsAlertText(sheets);
+				text = "Sheets in the workbook:\n" + text;
+				alert(text);
+			}  			
+			
+			function queryDashboard() {
+				workbook.activateSheetAsync("Dashboard 1")
+				.then(function (dashboard) {
+					var worksheets = dashboard.getWorksheets();
+					var text = getSheetsAlertText(worksheets);
+					text = "Worksheets in the dashboard:\n" + text;
+					alert(text);
+				});
+			} 
+
+			function changeDashboardSize() {
+				workbook.activateSheetAsync("Dashboard 1")
+				.then(function (dashboard) {
+					dashboard.changeSizeAsync({
+						behavior: tableau.SheetSizeBehavior.AUTOMATIC
+					});
+				});
+			}
+			
+			function dashboardFilters()
+			{
+				var dashboard, mapSheet, graphSheet;
+					workbook.activateSheetAsync("Dashboard 1")
+					.then(function (sheet) {
+					  dashboard = sheet;
+					  mapSheet = dashboard.getWorksheets().get("Global Sales and Profits");
+					  graphSheet = dashboard.getWorksheets().get("Sales by Sub-Category");
+					  return mapSheet.selectMarksAsync("Country", "United States", tableau.SelectionUpdateType.REPLACE);
+					})
+					.then(function () {
+						// Do these two steps in parallel since they work on different sheets.
+						return graphSheet.applyFilterAsync(
+							"Category",
+							"Office Supplies",
+							tableau.FilterUpdateType.REPLACE);
+					});
+			}
+			
+			function exportPDF() {
+				viz.showExportPDFDialog();
+			}
+
+			function exportImage() {
+				viz.showExportImageDialog();
+			}      
+			
+			function exportCrossTab() {
+				viz.showExportCrossTabDialog();
+			} 
+			
+			function exportData() {
+				viz.showExportDataDialog();
+			}   
+			
+			function revertAll() {
+				workbook.revertAllAsync();
+			}     
+
+			function listenToMarksSelection() {
+            viz.addEventListener(tableau.TableauEventName.MARKS_SELECTION, onMarksSelection);
+			}
+
+			function onMarksSelection(marksEvent) {
+				return marksEvent.getMarksAsync().then(reportSelectedMarks);
+			}
+
+			function reportSelectedMarks(marks) {
+				var html = "";
+
+				for (var markIndex = 0; markIndex < marks.length; markIndex++) {
+					var pairs = marks[markIndex].getPairs();
+					html += "<b>Mark " + markIndex + ":</b><ul>";
+
+					for (var pairIndex = 0; pairIndex < pairs.length; pairIndex++) {
+						var pair = pairs[pairIndex];
+						html += "<li><b>Field Name:</b> " + pair.fieldName;
+						html += "<br/><b>Value:</b> " + pair.formattedValue + "</li>";
+					}
+
+					html += "</ul>";
+				}
+
+				var infoDiv = document.getElementById('markDetails');
+				infoDiv.innerHTML = html;
+			}
+				
+			function removeMarksSelectionEventListener() {
+			  viz.removeEventListener(tableau.TableauEventName.MARKS_SELECTION, onMarksSelection);
+			}  
         </script>
     </head>
     <body onload="initViz();">
@@ -149,6 +262,45 @@
                     <input type="button" value="Clear Selections" onclick="clearSelection();" class="col-sm btn btn-danger btn-sm">
                 </div>
             </div>
+			<div class="container" style="margin-left: 10px;">
+				<h3 class="header">Chain Call</h3>
+				<div class="row button-container">
+                    <input type="button" value="Chain Calls" onclick="chainCalls();" class="col-sm btn btn-primary btn-sm">
+                </div>
+			</div>
+			<div class="container" style="margin-left: 10px;">
+				<h3 class="header">Sheets</h3>
+				<div class="row button-container">
+                    <input type="button" value="Show Sheets" onclick="querySheets();" class="col-sm btn btn-primary btn-sm">
+					<input type="button" value="Show Dashboard" onclick="queryDashboard();" class="col-sm btn btn-primary btn-sm">
+				</div>
+				<div class="row button-container">
+                    <input type="button" value="Change Dashboard Size" onclick="changeDashboardSize();" class="col-sm btn btn-dark btn-sm">
+				</div>
+				<div class="row button-container">
+					<input type="button" value="Modify Dashboard Sheets" onclick="dashboardFilters();" class="col-sm btn btn-info btn-sm">
+				</div>
+			</div>
+			<div class="container" style="margin-left: 10px;">
+				<h3 class="header">Toolbar</h3>
+				<div class="row button-container">
+                    <input type="button" value="Export PDF" onclick="exportPDF();" class="col-sm btn btn-warning btn-sm">
+					<input type="button" value="Export Image" onclick="exportImage();" class="col-sm btn btn-warning btn-sm">
+					<input type="button" value="Export Crosstab" onclick="exportCrossTab();" class="col-sm btn btn-warning btn-sm">
+					<input type="button" value="Export Data" onclick="exportData();" class="col-sm btn btn-warning btn-sm">
+                </div>
+				<div class="row button-container">
+                    <input type="button" value="Revert All" onclick="revertAll();" class="col-sm btn btn-danger btn-sm">
+                </div>
+			</div>
+			<div class="container" style="margin-left: 10px;">
+				<h3 class="header">Event Listener</h3>
+				<div class="row button-container">
+                    <input type="button" value="Enable Listener" onclick="listenToMarksSelection();" class="col-sm btn btn-primary btn-sm">
+					<input type="button" value="Disable Listener" onclick="removeMarksSelectionEventListener();" class="col-sm btn btn-danger btn-sm">
+                </div>
+			</div>
+			<div id="markDetails"></div>
         </form>
     </body>
 </html>
